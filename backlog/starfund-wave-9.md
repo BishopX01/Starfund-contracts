@@ -1,14 +1,17 @@
-# StarFund Contracts — Backlog Wave 9 (Published Archive)
+# StarFund Contracts — Backlog (Published Archive)
 
 ## Backlog Status & Audit History
 
 - **Repository:** `ushpraise/Starfund-contracts` (`https://github.com/ushpraise/Starfund-contracts`)
-- **Status:** **Published to GitHub (All 110 Wave 9 Issues Live)**
+- **Status:** **Published to GitHub (All 240 Wave 9 & Wave 10 Issues Live)**
 - **Active / Unpublished Backlog Remaining:** **0** (all issues published)
 - **Publication Waves:**
   - **Wave 9 Batch 1 (#1–#50):** Published as GitHub issues **#20 through #69**, archived in [`drips wave 9.md`](../drips%20wave%209.md).
   - **Wave 9 Batch 2 (#51–#110):** Published as GitHub issues **#70 through #129**, detailed below with full technical descriptions and GitHub issue links.
-- **Traceability Guarantee:** Every issue below preserves its original Wave backlog number (#51–#110), its assigned GitHub issue number (#70–#129), complete technical context, reproduction evidence, and acceptance criteria.
+  - **Wave 10 Batch 1 (#111–#140):** Published as GitHub issues **#164 through #193**.
+  - **Wave 10 Batch 2 (#141–#190):** Published as GitHub issues **#244 through #293**.
+  - **Wave 10 Batch 3 (#191–#240):** Published as GitHub issues **#194 through #243**.
+- **Traceability Guarantee:** Every issue below preserves its original Wave backlog number (#1–#240), its assigned GitHub issue number, complete technical context, reproduction evidence, and acceptance criteria.
 
 ---
 
@@ -2324,3 +2327,20 @@ Add a stateful proptest in `properties.rs` asserting:
 | #108 | [#127](https://github.com/ushpraise/Starfund-contracts/issues/127) | `docs/escrow-ledger-time.md` references non-existent string assert messages | Documentation | Low | Trivial | `docs/escrow-ledger-time.md:29, 44` |
 | #109 | [#128](https://github.com/ushpraise/Starfund-contracts/issues/128) | Cargo workspace configuration excludes tests from coverage but CI specifies `testutils` | Tooling / CI | Low | Trivial | `Cargo.toml:5–11`, `.github/workflows/ci.yml:53–56` |
 | #110 | [#129](https://github.com/ushpraise/Starfund-contracts/issues/129) | Missing property test for `unfund` conservation and unique funder count monotonicity | Testing | Medium | Medium | `escrow/src/tests/properties.rs` |
+
+---
+
+# Published Wave 10 Issues Summary (#111 through #240)
+
+All 130 Wave 10 development issues have been verified against the codebase, assigned approved functional labels (`bug`, `enhancement`, `security`, `testing`, `documentation`, `refactor`), and published to GitHub.
+
+| Batch | Backlog Range | Count | GitHub Issues | Scope / Technical Focus |
+|---|---|---|---|---|
+| **Wave 10 Batch 1** | #111–#140 | 30 | [#164 through #193](https://github.com/ushpraise/Starfund-contracts/issues?q=is%3Aissue) | Escrow lifecycle, dispute gating, allowlist indexing, and event schemas |
+| **Wave 10 Batch 3** | #191–#240 | 50 | [#194 through #243](https://github.com/ushpraise/Starfund-contracts/issues?q=is%3Aissue) | Governance validation, fee setter architecture, pagination robustness, proptests |
+| **Wave 10 Batch 2** | #141–#190 | 50 | [#244 through #293](https://github.com/ushpraise/Starfund-contracts/issues?q=is%3Aissue) | Key recovery, replay nonces, pause scopes, attestation logs, rent & TTL |
+
+- **Total Wave 10 Issues Live on GitHub:** 130 issues
+- **Total Protocol Issues Live on GitHub:** 259 issues
+- **Active / Unpublished Backlog Remaining:** 0
+
