@@ -653,6 +653,17 @@ pub enum EscrowError {
     FundingTokenNotSet = 21,
     /// [`DataKey::Treasury`] is unset (escrow not fully initialized).
     TreasuryNotSet = 22,
+    /// [`StarfundEscrow::raise_max_per_investor`] / [`StarfundEscrow::lower_max_per_investor`]
+    /// called without a configured cap.
+    MaxPerInvestorCapNotConfigured = 24,
+    /// [`StarfundEscrow::raise_max_per_investor`] did not strictly raise the cap.
+    MaxPerInvestorCapNotRaised = 25,
+    /// [`StarfundEscrow::lower_max_per_investor`] received a non-positive cap.
+    MaxPerInvestorCapNotPositive = 26,
+    /// [`StarfundEscrow::lower_max_per_investor`] did not strictly lower the cap.
+    MaxPerInvestorCapNotLowered = 27,
+    /// [`StarfundEscrow::lower_max_per_investor`] called while escrow is not open.
+    PerInvestorCapLowerNotOpen = 28,
 
     /// [`StarfundEscrow::sweep_terminal_dust`] blocked while a legal hold is active.
     LegalHoldBlocksTreasuryDustSweep = 30,
@@ -1056,6 +1067,10 @@ pub enum EscrowError {
     /// This bounds the worst-case release instruction budget that scales with participant
     /// count when `max_unique_investors` was not configured at init.
     UniqueInvestorHardCapReached = 261,
+    /// [`StarfundEscrow::raise_max_per_investor`] set a cap above the funding target.
+    PerInvestorCapExceedsFundingTarget = 268,
+    /// [`StarfundEscrow::raise_max_per_investor`] set a cap below the minimum contribution floor.
+    PerInvestorCapBelowMinContributionFloor = 270,
 
     /// [`StarfundEscrow::accept_payer_recovery`] called after the proposal expiry recorded at
     /// [`DataKey::PendingPayerExpiry`]. Re-propose to nominate a fresh successor payer.
@@ -6691,6 +6706,9 @@ impl StarfundEscrow {
     /// - [`EscrowError::CapLowerNotOpen`] if escrow is not in Open state.
     /// - [`EscrowError::MaxPerInvestorCapNotConfigured`] if no cap was set at init.
     /// - [`EscrowError::MaxPerInvestorCapNotRaised`] if `new_cap <= current_cap`.
+    /// - [`EscrowError::PerInvestorCapExceedsFundingTarget`] if `new_cap` exceeds the funding target.
+    /// - [`EscrowError::PerInvestorCapBelowMinContributionFloor`] if `new_cap` is below the minimum
+    ///   contribution floor.
     pub fn raise_max_per_investor(env: Env, new_cap: i128) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
 
@@ -6708,6 +6726,21 @@ impl StarfundEscrow {
             &env,
             new_cap > old_cap,
             EscrowError::MaxPerInvestorCapNotRaised,
+        );
+        ensure(
+            &env,
+            new_cap <= escrow.funding_target,
+            EscrowError::PerInvestorCapExceedsFundingTarget,
+        );
+        let min_contribution_floor: i128 = env
+            .storage()
+            .instance()
+            .get(&keys::min_contribution_floor())
+            .unwrap_or(0);
+        ensure(
+            &env,
+            new_cap >= min_contribution_floor,
+            EscrowError::PerInvestorCapBelowMinContributionFloor,
         );
 
         env.storage()
