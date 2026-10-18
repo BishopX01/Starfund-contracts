@@ -440,3 +440,6 @@ MIT
 
 <!-- handsoff-issue-282 -->
 - #282: [Wave 10 #179] get_escrow Panics With Raw String Allocation on Uninitialized Contract Instead of Typed Error
+
+<!-- handsoff-issue-283 -->
+- #283: [Wave 10 #180] get_storage_limit Does Not Validate Key Presence Against Current Schema Version
