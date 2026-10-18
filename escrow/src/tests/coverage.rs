@@ -3977,7 +3977,7 @@ fn test_state_machine_illegal_transitions_rejected() {
         &None::<u32>,);
 
     // 3. Cancel client2 to reach Status 4 (Cancelled)
-    client2.cancel_funding();
+    client2.cancel_funding(&0u32);
     assert_eq!(client2.get_escrow().status, 4);
 
     // In Status 4 (Cancelled):

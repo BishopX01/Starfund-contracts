@@ -6795,7 +6795,7 @@ fn test_extend_funding_deadline_rejects_non_open_status() {
 
     init_with_funding_deadline(&env, &client, &admin, &sme, initial, 0);
 
-    client.cancel_funding();
+    client.cancel_funding(&0u32);
 
     assert_contract_error(
         client.try_extend_funding_deadline(&(initial + 50)),
@@ -7478,7 +7478,7 @@ fn test_unfund_wrong_status_cancelled() {
     );
 
     client.fund(&investor, &(TARGET / 2));
-    client.cancel_funding(); // status = 4
+    client.cancel_funding(&0u32); // status = 4
 
     assert_contract_error(
         client.try_unfund(&investor, &1i128),
