@@ -4371,15 +4371,23 @@ impl StarfundEscrow {
         env.storage().instance().get(&keys::max_per_investor_cap())
     }
 
-    /// Distinct funders counted so far (each address counted once when it first receives principal).
+    /// Number of indexed investors with a non-zero current contribution.
     ///
-    /// **Sybil:** this limits distinct **chain accounts**, not real-world persons; Sybil resistance is
-    /// not a goal of this counter.
+    /// Recomputed from the investor index rather than read from the cached counter. This is
+    /// O(n) in the number of indexed investor addresses.
     pub fn get_unique_funder_count(env: Env) -> u32 {
-        env.storage()
+        let index: Vec<Address> = env
+            .storage()
             .instance()
-            .get(&keys::unique_funder_count())
-            .unwrap_or(0)
+            .get(&keys::investor_index())
+            .unwrap_or_else(|| Vec::new(&env));
+        let mut count = 0u32;
+        for investor in index.iter() {
+            if Self::get_persistent_investor_contribution(&env, investor) > 0 {
+                count = count.saturating_add(1);
+            }
+        }
+        count
     }
 
     /// Bundles multiple read-only values to return a comprehensive summary of the escrow state

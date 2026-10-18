@@ -625,13 +625,15 @@ return `0`, matching `get_contribution`.
 
 ### `get_unique_funder_count() → u32`
 
-**Storage key:** `DataKey::UniqueFunderCount`
+**Derived from:** active non-zero contributions in `DataKey::InvestorIndex`
 **Signature:** `pub fn get_unique_funder_count(env: Env) -> u32`
 
-Returns the count of distinct investor addresses with non-zero contributions. Initialized to `0` at `init`.
+Returns the count of listed investor addresses whose current contribution is non-zero. The
+cached `DataKey::UniqueFunderCount` is not trusted by this view, so stale cache values do not
+affect the result.
 
-**Requires initialization:** No (but written as `0` at `init`)  
-**Default when absent:** `0`
+**Requires initialization:** No
+**Default when the investor index is absent:** `0`
 
 **Notes:** counts distinct chain accounts, not real-world persons (Sybil resistance is not a goal of this counter).
 

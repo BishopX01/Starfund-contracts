@@ -7307,6 +7307,9 @@ fn test_unfund_funder_count_floor() {
             .set(&DataKey::UniqueFunderCount, &0u32);
     });
 
+    // The public getter counts active indexed contributors instead of trusting the cache.
+    assert_eq!(client.get_unique_funder_count(), 1);
+
     // Unfund full contribution — saturating_sub must keep it at 0, not wrap.
     client.unfund(&investor, &1i128);
 
