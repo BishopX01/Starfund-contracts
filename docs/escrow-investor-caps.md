@@ -116,11 +116,12 @@ Admin-only: lowers an already-configured per-investor cap while the escrow is op
 must be positive and strictly less than the current cap. The lower cap applies to subsequent
 deposits; existing principal is not changed. Emits `MaxPerInvestorCapLowered`.
 
-#### `lower_max_unique_investors(env: Env, new_cap: u32) -> u32`
+#### `lower_max_unique_investors(env: Env, new_cap: u32, expected_nonce: u32) -> u32`
 
 Admin-only: reduces the configured cap while the escrow is **open** (status `0`).
 
 - Requires admin authorization.
+- Requires the current admin nonce to prevent replayed configuration updates.
 - Only permitted when a cap was configured at init.
 - `new_cap` must satisfy `unique_funder_count <= new_cap < old_cap`.
 - Rejects raising the cap or imposing a cap on an unlimited escrow.
