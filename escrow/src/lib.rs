@@ -6692,8 +6692,9 @@ impl StarfundEscrow {
     /// - [`EscrowError::CapLowerNotOpen`] if escrow is not in Open state.
     /// - [`EscrowError::MaxPerInvestorCapNotConfigured`] if no cap was set at init.
     /// - [`EscrowError::MaxPerInvestorCapNotRaised`] if `new_cap <= current_cap`.
-    pub fn raise_max_per_investor(env: Env, new_cap: i128) -> i128 {
+    pub fn raise_max_per_investor(env: Env, new_cap: i128, expected_nonce: u32) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         guard_status_eq(&env, escrow.status, 0, EscrowError::CapLowerNotOpen);
 

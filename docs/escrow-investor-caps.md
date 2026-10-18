@@ -103,10 +103,11 @@ must be positive and strictly greater than the current floor. Emits `MinContribu
 Admin-only: lowers the per-deposit minimum while the escrow is open (status `0`). The new floor
 must be positive and strictly less than the current floor. Emits `MinContributionFloorLowered`.
 
-#### `raise_max_per_investor(env: Env, new_cap: i128) -> i128`
+#### `raise_max_per_investor(env: Env, new_cap: i128, expected_nonce: u32) -> i128`
 
 Admin-only: raises an already-configured per-investor cap while the escrow is open. The new cap
-must be strictly greater than the current cap. Emits `MaxPerInvestorCapRaised`.
+must be strictly greater than the current cap. Requires the current admin nonce to prevent replayed
+configuration updates. Emits `MaxPerInvestorCapRaised`.
 
 #### `lower_max_per_investor(env: Env, new_cap: i128) -> i128`
 

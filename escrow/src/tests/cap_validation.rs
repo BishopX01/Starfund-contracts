@@ -2235,9 +2235,14 @@ fn test_raise_max_per_investor_succeeds() {
     );
 
     assert_eq!(client.get_max_per_investor_cap(), Some(50_000_000_000i128));
-    let returned = client.raise_max_per_investor(&75_000_000_000i128);
+    let returned = client.raise_max_per_investor(&75_000_000_000i128, &client.get_admin_nonce());
     assert_eq!(returned, 75_000_000_000i128);
     assert_eq!(client.get_max_per_investor_cap(), Some(75_000_000_000i128));
+    assert_eq!(client.get_admin_nonce(), 1);
+    assert_contract_error(
+        client.try_raise_max_per_investor(&90_000_000_000i128, &0u32),
+        EscrowError::AdminNonceMismatch,
+    );
 }
 
 #[test]
@@ -2248,7 +2253,7 @@ fn test_raise_max_per_investor_not_configured_panics() {
 
     assert_eq!(client.get_max_per_investor_cap(), None);
     assert_contract_error(
-        client.try_raise_max_per_investor(&10_000i128),
+        client.try_raise_max_per_investor(&10_000i128, &client.get_admin_nonce()),
         EscrowError::MaxPerInvestorCapNotConfigured,
     );
 }
@@ -2284,7 +2289,7 @@ fn test_raise_max_per_investor_not_raised_rejects_equal() {
     );
 
     assert_contract_error(
-        client.try_raise_max_per_investor(&50_000_000_000i128),
+        client.try_raise_max_per_investor(&50_000_000_000i128, &client.get_admin_nonce()),
         EscrowError::MaxPerInvestorCapNotRaised,
     );
 }
@@ -2318,7 +2323,7 @@ fn test_raise_max_per_investor_emits_event() {
         &None::<u32>,
     );
 
-    client.raise_max_per_investor(&75_000_000_000i128);
+    client.raise_max_per_investor(&75_000_000_000i128, &client.get_admin_nonce());
 
     let all_events = env.events().all();
     let expected = MaxPerInvestorCapRaised {
