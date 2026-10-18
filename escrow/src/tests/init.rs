@@ -43,6 +43,40 @@ fn test_init_stores_escrow() {
 }
 
 #[test]
+fn test_init_rejects_max_per_investor_above_amount() {
+    for max_per_investor in [1_001i128, i128::MAX] {
+        let env = Env::default();
+        env.mock_all_auths();
+        let client = deploy(&env);
+
+        assert_contract_error(
+            client.try_init(
+                &Address::generate(&env),
+                &soroban_sdk::String::from_str(&env, "INIT-CAP"),
+                &Address::generate(&env),
+                &1_000i128,
+                &800i64,
+                &0u64,
+                &Address::generate(&env),
+                &None,
+                &Address::generate(&env),
+                &None,
+                &None,
+                &None,
+                &Some(max_per_investor),
+                &None,
+                &None,
+                &None,
+                &None,
+                &None::<i64>,
+                &None::<u32>,
+            ),
+            EscrowError::MaxPerInvestorExceedsAmount,
+        );
+    }
+}
+
+#[test]
 fn test_init_rejects_contract_address_as_token_or_recipient() {
     for self_address_field in 0..3 {
         let env = Env::default();

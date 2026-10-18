@@ -1081,6 +1081,8 @@ pub enum EscrowError {
     FundingTokenDecimalsOutOfRange = 268,
     /// [`StarfundEscrow::init`] used the escrow contract address as the token or recipient.
     InitAddressIsContract = 269,
+    /// [`StarfundEscrow::init`] configured `max_per_investor` above the funding target.
+    MaxPerInvestorExceedsAmount = 270,
 }
 
 #[inline(always)]
@@ -3531,6 +3533,11 @@ impl StarfundEscrow {
 
         if let Some(cap) = max_per_investor {
             ensure(&env, cap > 0, EscrowError::MaxPerInvestorNotPositive);
+            ensure(
+                &env,
+                cap <= amount,
+                EscrowError::MaxPerInvestorExceedsAmount,
+            );
         }
 
         if let Some(cap) = max_unique_investors {
