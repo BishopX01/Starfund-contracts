@@ -7,6 +7,7 @@ This document contains reference codes for typed `EscrowError` values emitted by
 | Error Name | Code | Description |
 |---|---|---|
 | `FundingTokenDecimalsOutOfRange` | 268 | `init` configured funding-token decimals above the supported maximum of 18. |
+| `InitAddressIsContract` | 269 | `init` used the escrow contract address as the funding token, SME, or treasury address. |
 
 ## Settlement & Bounds Errors
 

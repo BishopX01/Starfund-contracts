@@ -1079,6 +1079,8 @@ pub enum EscrowError {
     PartialSettleNoFunds = 209,
     /// [`StarfundEscrow::init`] configured token decimals above the supported maximum of 18.
     FundingTokenDecimalsOutOfRange = 268,
+    /// [`StarfundEscrow::init`] used the escrow contract address as the token or recipient.
+    InitAddressIsContract = 269,
 }
 
 #[inline(always)]
@@ -3492,6 +3494,14 @@ impl StarfundEscrow {
                 EscrowError::FundingTokenDecimalsOutOfRange,
             );
         }
+        let contract_address = env.current_contract_address();
+        ensure(
+            &env,
+            funding_token != contract_address
+                && sme_address != contract_address
+                && treasury != contract_address,
+            EscrowError::InitAddressIsContract,
+        );
 
         Self::validate_yield_tiers_table(&env, &yield_tiers, yield_bps);
 

@@ -43,6 +43,55 @@ fn test_init_stores_escrow() {
 }
 
 #[test]
+fn test_init_rejects_contract_address_as_token_or_recipient() {
+    for self_address_field in 0..3 {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (contract_address, client) = deploy_with_id(&env);
+        let token = if self_address_field == 0 {
+            contract_address.clone()
+        } else {
+            Address::generate(&env)
+        };
+        let sme = if self_address_field == 1 {
+            contract_address.clone()
+        } else {
+            Address::generate(&env)
+        };
+        let treasury = if self_address_field == 2 {
+            contract_address
+        } else {
+            Address::generate(&env)
+        };
+
+        assert_contract_error(
+            client.try_init(
+                &Address::generate(&env),
+                &soroban_sdk::String::from_str(&env, "INIT-SELF"),
+                &sme,
+                &1_000i128,
+                &800i64,
+                &0u64,
+                &token,
+                &None,
+                &treasury,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None::<i64>,
+                &None::<u32>,
+            ),
+            EscrowError::InitAddressIsContract,
+        );
+    }
+}
+
+#[test]
 fn test_init_stores_keyed_invoice_and_lists_it() {
     let env = Env::default();
     let (client, admin, sme) = setup(&env);
