@@ -6703,7 +6703,7 @@ impl StarfundEscrow {
     /// # Errors
     /// Emits typed [`EscrowError`] codes:
     /// - [`EscrowError::Unauthorized`] if caller is not admin (via `load_escrow_require_admin`).
-    /// - [`EscrowError::CapLowerNotOpen`] if escrow is not in Open state.
+    /// - [`EscrowError::EscrowNotOpenForFunding`] if escrow is not in Open state.
     /// - [`EscrowError::MaxPerInvestorCapNotConfigured`] if no cap was set at init.
     /// - [`EscrowError::MaxPerInvestorCapNotRaised`] if `new_cap <= current_cap`.
     /// - [`EscrowError::PerInvestorCapExceedsFundingTarget`] if `new_cap` exceeds the funding target.
@@ -6712,7 +6712,12 @@ impl StarfundEscrow {
     pub fn raise_max_per_investor(env: Env, new_cap: i128) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
 
-        guard_status_eq(&env, escrow.status, 0, EscrowError::CapLowerNotOpen);
+        guard_status_eq(
+            &env,
+            escrow.status,
+            0,
+            EscrowError::EscrowNotOpenForFunding,
+        );
 
         let old_cap: Option<i128> = env.storage().instance().get(&keys::max_per_investor_cap());
         ensure(
