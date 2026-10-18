@@ -4215,7 +4215,7 @@ fn test_raise_maturity_max_horizon_succeeds() {
     assert_eq!(client.get_maturity_max_horizon(), default_horizon);
 
     let new_horizon = default_horizon + 3_600;
-    let returned = client.raise_maturity_max_horizon(&new_horizon);
+    let returned = client.raise_maturity_max_horizon(&new_horizon, &0u32);
     assert_eq!(returned, new_horizon);
     assert_eq!(client.get_maturity_max_horizon(), new_horizon);
 }
@@ -4249,7 +4249,7 @@ fn test_raise_maturity_max_horizon_not_raised_panics() {
 
     let default_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
     assert_contract_error(
-        client.try_raise_maturity_max_horizon(&default_horizon),
+        client.try_raise_maturity_max_horizon(&default_horizon, &0u32),
         EscrowError::HorizonNotRaised,
     );
 }
@@ -4285,7 +4285,7 @@ fn test_raise_maturity_max_horizon_emits_event() {
 
     let old_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
     let new_horizon = old_horizon + 7_200;
-    client.raise_maturity_max_horizon(&new_horizon);
+    client.raise_maturity_max_horizon(&new_horizon, &0u32);
 
     let all_events = env.events().all();
     let expected = MaturityMaxHorizonRaised {
@@ -4300,6 +4300,52 @@ fn test_raise_maturity_max_horizon_emits_event() {
             .contains(&expected.to_xdr(&env, &client.address)),
         "MaturityMaxHorizonRaised event must be emitted"
     );
+}
+
+#[test]
+fn test_raise_maturity_max_horizon_requires_current_admin_nonce() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    let (token, treasury) = free_addresses(&env);
+    client.init(
+        &admin,
+        &soroban_sdk::String::from_str(&env, "RMMH004"),
+        &sme,
+        &1_000i128,
+        &500i64,
+        &0u64,
+        &token,
+        &None,
+        &treasury,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    let old_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
+    let new_horizon = old_horizon + 3_600;
+    assert_contract_error(
+        client.try_raise_maturity_max_horizon(&new_horizon, &1u32),
+        EscrowError::AdminNonceMismatch,
+    );
+    assert_eq!(client.get_maturity_max_horizon(), old_horizon);
+
+    assert_eq!(
+        client.raise_maturity_max_horizon(&new_horizon, &0u32),
+        new_horizon
+    );
+    assert_contract_error(
+        client.try_raise_maturity_max_horizon(&(new_horizon + 1), &0u32),
+        EscrowError::AdminNonceMismatch,
+    );
+    assert_eq!(client.get_maturity_max_horizon(), new_horizon);
 }
 // ── Issue #552: get_pending_admin_remaining_secs ─────────────────────────────
 

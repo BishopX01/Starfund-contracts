@@ -1071,6 +1071,8 @@ pub enum EscrowError {
     PerInvestorCapExceedsFundingTarget = 268,
     /// [`StarfundEscrow::raise_max_per_investor`] set a cap below the minimum contribution floor.
     PerInvestorCapBelowMinContributionFloor = 270,
+    /// [`StarfundEscrow::raise_maturity_max_horizon`] did not strictly raise the horizon.
+    HorizonNotRaised = 271,
 
     /// [`StarfundEscrow::accept_payer_recovery`] called after the proposal expiry recorded at
     /// [`DataKey::PendingPayerExpiry`]. Re-propose to nominate a fresh successor payer.
@@ -8492,25 +8494,28 @@ impl StarfundEscrow {
 
     /// Monotonically **raise** the maturity-max-horizon ceiling ΓÇö a forward-only governance lever.
     ///
-    /// Unlike the general [`StarfundEscrow::update_maturity_max_horizon`] setter (which accepts any
-    /// value), this entrypoint guarantees the horizon can only ever be raised, never lowered or held
-    /// equal. This supports a "term-extension only" policy and avoids the confusing invalid
-    /// configuration that arises when a horizon is lowered below an already-set maturity.
+    /// Unlike the general [`StarfundEscrow::update_maturity_max_horizon`] setter (which may lower
+    /// the horizon if the current maturity remains within its new limit), this entrypoint guarantees
+    /// the horizon can only ever be raised, never lowered or held equal.
     ///
     /// # Authorization
     /// Requires the signature of the current [`InvoiceEscrow::admin`].
+    /// Requires the current admin nonce to be supplied for replay protection.
     ///
     /// # Errors
     /// - [`EscrowError::HorizonNotRaised`] if `new_horizon` is not strictly greater than the current
     ///   stored horizon (rejects equal or lower values).
+    /// - [`EscrowError::AdminNonceMismatch`] if `expected_nonce` does not match the current admin
+    ///   nonce.
     ///
     /// # Events
     /// Emits [`MaturityMaxHorizonRaised`] carrying `invoice_id`, the old horizon, and the new horizon.
     ///
     /// # Returns
     /// The newly stored horizon.
-    pub fn raise_maturity_max_horizon(env: Env, new_horizon: u64) -> u64 {
+    pub fn raise_maturity_max_horizon(env: Env, new_horizon: u64, expected_nonce: u32) -> u64 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         let old_horizon = env
             .storage()

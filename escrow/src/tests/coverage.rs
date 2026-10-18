@@ -176,6 +176,7 @@ fn escrow_error_discriminants_are_unique() {
         EscrowError::PerInvestorCapLowerNotOpen,
         EscrowError::PerInvestorCapExceedsFundingTarget,
         EscrowError::PerInvestorCapBelowMinContributionFloor,
+        EscrowError::HorizonNotRaised,
         EscrowError::LegalHoldBlocksTreasuryDustSweep,
         EscrowError::SweepAmountNotPositive,
         EscrowError::SweepAmountExceedsMax,
@@ -425,11 +426,12 @@ fn escrow_error_discriminants_match_canonical_table() {
         (EscrowError::NoPendingAdmin, 250),
         (EscrowError::PerInvestorCapExceedsFundingTarget, 268),
         (EscrowError::PerInvestorCapBelowMinContributionFloor, 270),
+        (EscrowError::HorizonNotRaised, 271),
         (EscrowError::FloorLowerNotOpen, 269),
         (EscrowError::NewFloorNotLower, 262),
         (EscrowError::NewFloorNotPositive, 261),
     ];
-    assert_eq!(TABLE.len(), 98);
+    assert_eq!(TABLE.len(), 99);
     for (variant, code) in TABLE {
         assert_eq!(*variant as u32, *code, "discriminant drift for code {code}");
     }
