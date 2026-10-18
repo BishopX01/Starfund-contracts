@@ -437,3 +437,6 @@ MIT
 
 <!-- handsoff-issue-281 -->
 - #281: [Wave 10 #178] set_storage_limit Lacks Minimum Lower Bound, Permitting limit = 0 and Bricking Batch Operations
+
+<!-- handsoff-issue-282 -->
+- #282: [Wave 10 #179] get_escrow Panics With Raw String Allocation on Uninitialized Contract Instead of Typed Error
