@@ -166,10 +166,7 @@ fn test_tier_table_accepts_zero_and_single_entry_lengths() {
     let empty_client = init_with_tiers(&empty_env, 0, Some(empty));
     assert_eq!(empty_client.get_yield_tiers().len(), 0);
     assert!(!empty_env.as_contract(&empty_client.address, || {
-        empty_env
-            .storage()
-            .instance()
-            .has(&DataKey::YieldTierTable)
+        empty_env.storage().instance().has(&DataKey::YieldTierTable)
     }));
 
     let absent_env = Env::default();

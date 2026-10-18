@@ -1245,8 +1245,7 @@ fn test_lower_min_contribution_floor_success() {
 
     assert_eq!(client.get_min_contribution_floor(), initial_floor);
 
-    let new_floor =
-        client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
+    let new_floor = client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert_eq!(new_floor, 5_000i128);
     assert_eq!(client.get_min_contribution_floor(), 5_000i128);
     assert_eq!(client.get_admin_nonce(), 1);
