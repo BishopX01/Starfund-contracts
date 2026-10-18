@@ -1620,7 +1620,7 @@ fn cancelled_escrow<'a>(
     for (investor, amount) in contributions {
         client.fund(investor, amount);
     }
-    client.cancel_funding();
+    client.cancel_funding(&0u32);
     client
 }
 

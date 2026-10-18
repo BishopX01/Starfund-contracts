@@ -57,7 +57,7 @@ fn setup_open(
 
 /// Move the escrow to cancelled status (status == 4).
 fn cancel(client: &StarfundEscrowClient<'_>, _admin: &Address) {
-    client.cancel_funding();
+    client.cancel_funding(&0u32);
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ fn test_cancel_funding_rejects_when_already_cancelled() {
     let env = make_env();
     let (client, admin, _sme, _tok, _tre) = setup_open(&env);
     cancel(&client, &admin);
-    let result = client.try_cancel_funding();
+    let result = client.try_cancel_funding(&0u32);
     assert_contract_error(result, EscrowError::CancelFundingNotOpen);
 }
 
