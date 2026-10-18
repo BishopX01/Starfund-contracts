@@ -7678,6 +7678,7 @@ fn test_unfund_then_fund_again() {
     client.fund(&investor, &5_000i128);
 
     assert_eq!(client.get_contribution(&investor), 15_000i128);
+    assert_eq!(client.get_total_deposited(&investor), 25_000i128);
     assert_eq!(client.get_escrow().funded_amount, 15_000i128);
 }
 

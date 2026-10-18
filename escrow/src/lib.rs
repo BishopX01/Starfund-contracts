@@ -546,6 +546,7 @@ pub(crate) fn extend_ttl_for_activity(env: &Env, escrow: &InvoiceEscrow, investo
     if let Some(addr) = investor {
         let keys = [
             DataKey::InvestorContribution(addr.clone()),
+            DataKey::InvestorTotalDeposited(addr.clone()),
             DataKey::InvestorEffectiveYield(addr.clone()),
             DataKey::InvestorClaimNotBefore(addr.clone()),
             DataKey::InvestorClaimed(addr.clone()),
@@ -810,6 +811,8 @@ pub enum EscrowError {
     /// Reject at deposit time so a settled escrow cannot hold an investor's payout
     /// claim hostage beyond the point where principal is due.
     CommitmentLockExceedsMaturity = 111,
+    /// Cumulative successful deposits would overflow the investor's historical total.
+    InvestorTotalDepositedOverflow = 112,
 
     /// [`StarfundEscrow::settle`] blocked while a legal hold is active.
     LegalHoldBlocksSettlement = 120,
@@ -1357,6 +1360,10 @@ pub enum DataKey {
     /// Per-investor contributed principal recorded during [`StarfundEscrow::fund`].
     /// **Persistent** storage. Absent ΓçÆ `0`. One entry per investor address.
     InvestorContribution(Address),
+    /// Per-investor gross amount credited by successful funding calls.
+    /// **Persistent** storage. Unfunds, refunds, and withdrawals do not reduce it.
+    /// An absent key falls back to the current contribution for backward compatibility.
+    InvestorTotalDeposited(Address),
     /// When true, compliance/legal hold blocks payouts and settlement finalization.
     /// Absent ΓçÆ `false` (no hold). Toggled by admin via [`StarfundEscrow::set_legal_hold`].
     LegalHold,
@@ -4507,10 +4514,23 @@ impl StarfundEscrow {
             .unwrap_or(0)
     }
 
+    fn get_persistent_investor_total_deposited(env: &Env, investor: Address) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&keys::investor_total_deposited(investor.clone()))
+            .unwrap_or_else(|| Self::get_persistent_investor_contribution(env, investor))
+    }
+
     fn set_persistent_investor_contribution(env: &Env, investor: Address, amount: i128) {
         env.storage()
             .persistent()
             .set(&keys::investor_contribution(investor), &amount);
+    }
+
+    fn set_persistent_investor_total_deposited(env: &Env, investor: Address, amount: i128) {
+        env.storage()
+            .persistent()
+            .set(&keys::investor_total_deposited(investor), &amount);
     }
 
     fn get_persistent_investor_effective_yield(env: &Env, investor: Address) -> Option<i64> {
@@ -4587,6 +4607,16 @@ impl StarfundEscrow {
     /// Public API: contribution recorded for `investor` (persistent storage).
     pub fn get_contribution(env: Env, investor: Address) -> i128 {
         Self::get_persistent_investor_contribution(&env, investor)
+    }
+
+    /// Gross amount successfully deposited by `investor`, excluding none of their deposits.
+    ///
+    /// Unlike [`StarfundEscrow::get_contribution`], this total is not reduced by unfunds,
+    /// refunds, or withdrawals. For storage created before this view was introduced, an
+    /// absent historical-total key falls back to the current contribution; earlier
+    /// withdrawals cannot be reconstructed on-chain.
+    pub fn get_total_deposited(env: Env, investor: Address) -> i128 {
+        Self::get_persistent_investor_total_deposited(&env, investor)
     }
 
     /// Public API: contributions recorded for `investors` in the same order as the input.
@@ -7104,6 +7134,9 @@ impl StarfundEscrow {
         let new_contribution: i128 = prev
             .checked_add(amount)
             .unwrap_or_else(|| fail(&env, EscrowError::InvestorContributionOverflow));
+        let total_deposited = Self::get_persistent_investor_total_deposited(&env, investor.clone())
+            .checked_add(amount)
+            .unwrap_or_else(|| fail(&env, EscrowError::InvestorTotalDepositedOverflow));
 
         if let Some(cap) = env
             .storage()
@@ -7224,6 +7257,7 @@ impl StarfundEscrow {
         }
 
         Self::set_persistent_investor_contribution(&env, investor.clone(), new_contribution);
+        Self::set_persistent_investor_total_deposited(&env, investor.clone(), total_deposited);
 
         Self::set_persistent_investor_effective_yield(
             &env,
@@ -8640,6 +8674,11 @@ impl StarfundEscrow {
                 ttl,
             );
             env.storage().persistent().extend_ttl(
+                &DataKey::InvestorTotalDeposited(addr.clone()),
+                ttl,
+                ttl,
+            );
+            env.storage().persistent().extend_ttl(
                 &DataKey::InvestorEffectiveYield(addr.clone()),
                 ttl,
                 ttl,
@@ -8674,8 +8713,9 @@ impl StarfundEscrow {
     ///
     /// For each [`DataKey`] in `keys`:
     ///
-    /// - **Per-investor persistent keys** (`InvestorContribution`, `InvestorEffectiveYield`,
-    ///   `InvestorClaimNotBefore`, `InvestorClaimed`, `InvestorAllowlisted`):
+    /// - **Per-investor persistent keys** (`InvestorContribution`, `InvestorTotalDeposited`,
+    ///   `InvestorEffectiveYield`, `InvestorClaimNotBefore`, `InvestorClaimed`,
+    ///   `InvestorAllowlisted`):
     ///   `env.storage().persistent().extend_ttl(&key, …)` is called **only when the key
     ///   already exists** in persistent storage (guarded by `has()` before the call).
     ///   Absent keys are silently skipped — an investor who has been allowlisted but not
