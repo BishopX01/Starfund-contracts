@@ -43,6 +43,60 @@ fn test_init_stores_escrow() {
 }
 
 #[test]
+fn test_init_rejects_min_contribution_above_max_per_investor() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+
+    assert_contract_error(
+        client.try_init(
+            &Address::generate(&env),
+            &soroban_sdk::String::from_str(&env, "INIT-FLOOR-CAP"),
+            &Address::generate(&env),
+            &10_000i128,
+            &800i64,
+            &0u64,
+            &Address::generate(&env),
+            &None,
+            &Address::generate(&env),
+            &None,
+            &Some(5_000i128),
+            &None,
+            &Some(1_000i128),
+            &None,
+            &None,
+            &None,
+            &None,
+            &None::<i64>,
+            &None::<u32>,
+        ),
+        EscrowError::MinContributionExceedsMaxPerInvestor,
+    );
+
+    client.init(
+        &Address::generate(&env),
+        &soroban_sdk::String::from_str(&env, "INIT-FLOOR-CAP-EQ"),
+        &Address::generate(&env),
+        &10_000i128,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &None,
+        &Address::generate(&env),
+        &None,
+        &Some(1_000i128),
+        &None,
+        &Some(1_000i128),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+}
+
+#[test]
 fn test_init_rejects_max_per_investor_above_amount() {
     for max_per_investor in [1_001i128, i128::MAX] {
         let env = Env::default();

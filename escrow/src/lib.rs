@@ -1083,6 +1083,8 @@ pub enum EscrowError {
     InitAddressIsContract = 269,
     /// [`StarfundEscrow::init`] configured `max_per_investor` above the funding target.
     MaxPerInvestorExceedsAmount = 270,
+    /// [`StarfundEscrow::init`] configured `min_contribution` above `max_per_investor`.
+    MinContributionExceedsMaxPerInvestor = 271,
 }
 
 #[inline(always)]
@@ -3537,6 +3539,14 @@ impl StarfundEscrow {
                 &env,
                 cap <= amount,
                 EscrowError::MaxPerInvestorExceedsAmount,
+            );
+        }
+
+        if let (Some(minimum), Some(cap)) = (min_contribution, max_per_investor) {
+            ensure(
+                &env,
+                minimum <= cap,
+                EscrowError::MinContributionExceedsMaxPerInvestor,
             );
         }
 
