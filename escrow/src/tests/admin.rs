@@ -3973,11 +3973,10 @@ fn test_update_maturity_max_horizon_default_fallback() {
     );
 }
 
-/// Lowering the horizon must NOT retroactively invalidate an already-set
-/// maturity. A subsequent `update_maturity` call targeting `now + new_horizon + 1`
-/// must be rejected; the stored maturity must remain intact throughout.
+/// Lowering the horizon must be rejected if it would put the existing maturity
+/// beyond the newly configured ceiling.
 #[test]
-fn test_lowered_horizon_existing_maturity_untouched_and_far_update_rejected() {
+fn test_update_horizon_cannot_invalidate_existing_maturity() {
     let env = Env::default();
     let (client, admin, sme) = setup(&env);
     let (token, treasury) = free_addresses(&env);
@@ -4007,29 +4006,20 @@ fn test_lowered_horizon_existing_maturity_untouched_and_far_update_rejected() {
 
     assert_eq!(client.get_escrow().maturity, 2_000u64);
 
-    // Lower the horizon to 500 s: new ceiling = now(1_000) + 500 = 1_500.
-    // The existing maturity (2_000) is beyond that ceiling but must survive unchanged.
-    client.update_maturity_max_horizon(&500u64);
+    // Lowering to 500 s would put the ceiling at 1_500, below the existing maturity.
+    assert_contract_error(
+        client.try_update_maturity_max_horizon(&500u64),
+        EscrowError::MaturityExceedsMaxHorizon,
+    );
+    assert_eq!(
+        client.get_maturity_max_horizon(),
+        DEFAULT_MATURITY_MAX_HORIZON_SECS,
+        "a rejected horizon update must not change the configured horizon"
+    );
     assert_eq!(
         client.get_escrow().maturity,
         2_000u64,
-        "lowering the horizon must not retroactively invalidate an already-set maturity"
-    );
-
-    // A subsequent update to 1_501 (one second beyond the new ceiling) must fail.
-    assert!(
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            client.update_maturity(&1_501u64, &0u32);
-        }))
-        .is_err(),
-        "update_maturity beyond the new horizon must be rejected"
-    );
-
-    // The stored maturity must remain 2_000 after the failed update attempt.
-    assert_eq!(
-        client.get_escrow().maturity,
-        2_000u64,
-        "a rejected update_maturity call must not alter the stored maturity"
+        "a rejected horizon update must leave the configured maturity intact"
     );
 }
 

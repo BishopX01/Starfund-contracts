@@ -8394,7 +8394,8 @@ impl StarfundEscrow {
     /// Update the configured maximum maturity horizon for this escrow instance.
     ///
     /// Only the current admin may call this. The new horizon applies to subsequent
-    /// [`StarfundEscrow::update_maturity`] calls; existing maturity values are unaffected.
+    /// [`StarfundEscrow::update_maturity`] calls. The new horizon cannot invalidate the
+    /// escrow's currently configured maturity.
     ///
     /// Emits [`MaturityMaxHorizonUpdated`] with the old and new horizon values.
     /// Returns the currently configured maximum maturity horizon (seconds from ledger time).
@@ -8424,6 +8425,17 @@ impl StarfundEscrow {
             .instance()
             .get::<DataKey, u64>(&DataKey::MaturityMaxHorizon)
             .unwrap_or(DEFAULT_MATURITY_MAX_HORIZON_SECS);
+
+        let latest_allowed_maturity = env
+            .ledger()
+            .timestamp()
+            .checked_add(new_horizon)
+            .unwrap_or_else(|| fail(&env, EscrowError::MaturityExceedsMaxHorizon));
+        ensure(
+            &env,
+            escrow.maturity <= latest_allowed_maturity,
+            EscrowError::MaturityExceedsMaxHorizon,
+        );
 
         env.storage()
             .instance()
