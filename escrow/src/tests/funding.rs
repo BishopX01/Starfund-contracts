@@ -7739,9 +7739,9 @@ fn test_unfund_event_emitted() {
         .expect("expected at least one event after unfund");
 
     let expected = EscrowUnfunded {
-        name: symbol_short!("unfunded"),
-        invoice_id,
+        name: symbol_short!("unfund"),
         investor: investor.clone(),
+        invoice_id,
         amount: unfund_amount,
         remaining_contribution: fund_amount - unfund_amount,
         new_funded_amount: fund_amount - unfund_amount,

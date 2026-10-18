@@ -2778,9 +2778,9 @@ pub struct EscrowUnfunded {
     #[topic]
     pub name: Symbol,
     #[topic]
-    pub invoice_id: Symbol,
-    #[topic]
     pub investor: Address,
+    #[topic]
+    pub invoice_id: Symbol,
     /// Amount withdrawn in this call.
     pub amount: i128,
     /// Investor's remaining contribution after this withdrawal.
@@ -9422,9 +9422,9 @@ impl StarfundEscrow {
         // 10. Event emission.
         let timestamp = env.ledger().timestamp();
         EscrowUnfunded {
-            name: symbol_short!("unfunded"),
-            invoice_id: escrow.invoice_id.clone(),
+            name: symbol_short!("unfund"),
             investor: investor.clone(),
+            invoice_id: escrow.invoice_id.clone(),
             amount,
             remaining_contribution,
             new_funded_amount,
