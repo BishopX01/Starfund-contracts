@@ -3390,7 +3390,10 @@ impl StarfundEscrow {
         let n = tiers.len();
         for i in 0..n {
             let t = tiers.get(i).unwrap();
-            if committed_lock_secs >= t.min_lock_secs && t.yield_bps > best {
+            if committed_lock_secs < t.min_lock_secs {
+                continue;
+            }
+            if t.yield_bps > best {
                 best = t.yield_bps;
                 best_lock = t.min_lock_secs;
             }

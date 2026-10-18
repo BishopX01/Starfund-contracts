@@ -1183,10 +1183,12 @@ fn test_tier_selection_edges_base_vs_high_bucket() {
     client.fund_with_commitment(&i_short, &10_000i128, &40u64);
 
     assert_eq!(client.get_investor_yield_bps(&i_short), 800);
+    assert_eq!(client.get_investor_claim_not_before(&i_short), 40);
 
     client.fund_with_commitment(&i_long, &10_000i128, &50u64);
 
     assert_eq!(client.get_investor_yield_bps(&i_long), 850);
+    assert_eq!(client.get_investor_claim_not_before(&i_long), 50);
 }
 
 /// A second `fund_with_commitment` from the same investor (who already has a
