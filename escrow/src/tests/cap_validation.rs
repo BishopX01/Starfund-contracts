@@ -1,7 +1,9 @@
 //! Standalone test for MaxUniqueInvestorsCap and UniqueFunderCount functionality
 //! This test file validates the core functionality without dependencies on other test modules
 use super::*;
-use crate::{MaxPerInvestorCapRaised, MaxUniqueInvestorsCapLowered, MinContributionFloorLowered};
+use crate::{
+    EscrowError, MaxPerInvestorCapRaised, MaxUniqueInvestorsCapLowered, MinContributionFloorLowered,
+};
 use soroban_sdk::{Address, Env, String};
 
 #[test]
@@ -1762,7 +1764,12 @@ fn test_raise_accepted_and_allows_extra_investors() {
     assert_eq!(client.get_unique_funder_count(), 2);
 
     // Raise cap to 4
-    client.raise_max_unique_investors(&4u32);
+    client.raise_max_unique_investors(&4u32, &client.get_admin_nonce());
+    assert_eq!(client.get_admin_nonce(), 1);
+    assert_contract_error(
+        client.try_raise_max_unique_investors(&5u32, &0u32),
+        EscrowError::AdminNonceMismatch,
+    );
 
     // Add two more investors
     let inv3 = Address::generate(&env);
@@ -1804,7 +1811,7 @@ fn test_raise_equal_rejected() {
         &None::<u32>,
     );
     // Attempt raise to same value -> should Err(NewCapNotHigher)
-    client.raise_max_unique_investors(&3u32);
+    client.raise_max_unique_investors(&3u32, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1837,7 +1844,7 @@ fn test_raise_lower_rejected() {
         &None::<i64>,
         &None::<u32>,
     );
-    client.raise_max_unique_investors(&2u32);
+    client.raise_max_unique_investors(&2u32, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1871,7 +1878,7 @@ fn test_raise_without_existing_cap() {
         &None::<i64>,
         &None::<u32>,
     );
-    client.raise_max_unique_investors(&5u32);
+    client.raise_max_unique_investors(&5u32, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1911,7 +1918,7 @@ fn test_raise_when_closed() {
     client.fund(&inv1, &100_000_000_000i128);
     client.fund(&inv2, &100_000_000_000i128);
     // Now escrow not open; raise should panic
-    client.raise_max_unique_investors(&4u32);
+    client.raise_max_unique_investors(&4u32, &client.get_admin_nonce());
 }
 
 // --- lower_max_unique_investors floor-at-funder-count boundary tests (#563) ---

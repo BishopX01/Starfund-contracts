@@ -125,11 +125,12 @@ Admin-only: reduces the configured cap while the escrow is **open** (status `0`)
 - Emits `MaxUniqueInvestorsCapLowered` (`inv_cap`) for indexers.
 - Returns the stored cap after update (same as `get_max_unique_investors_cap()`).
 
-#### `raise_max_unique_investors(env: Env, new_cap: u32) -> u32`
+#### `raise_max_unique_investors(env: Env, new_cap: u32, expected_nonce: u32) -> u32`
 
 Admin-only: increases the configured cap while the escrow is **open** (status `0`).
 
 - Requires admin authorization.
+- Requires the current admin nonce to prevent replayed configuration updates.
 - Only permitted when a cap was configured at init.
 - `new_cap` must satisfy `new_cap > old_cap`.
 - Emits `MaxUniqueInvestorsCapRaised` (`raise_cap`) for indexers.

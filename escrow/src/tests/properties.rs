@@ -2488,7 +2488,7 @@ fn slots_lower_cap_mid_sequence_invariant() {
     // Further lower to mid-range (cap = 5, count stays 3).
     // First reset cap to 6, then lower to 5.
     // Actually raise it back then lower again to test a partial lowering.
-    client.raise_max_unique_investors(&6u32);
+    client.raise_max_unique_investors(&6u32, &client.get_admin_nonce());
     client.lower_max_unique_investors(&5u32);
     assert_slots_invariant(&client, "after raise then lower to 5");
 

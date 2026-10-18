@@ -6531,8 +6531,9 @@ impl StarfundEscrow {
     /// - If the escrow is not open.
     /// - If no unique-investor cap was configured at initialization.
     /// - If `new_cap` is not strictly higher than the current cap.
-    pub fn raise_max_unique_investors(env: Env, new_cap: u32) -> u32 {
+    pub fn raise_max_unique_investors(env: Env, new_cap: u32, expected_nonce: u32) -> u32 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         // We can reuse the existing EscrowNotOpenForFunding or similar open check.
         // Or if there's a specific one, we use it. For now EscrowNotOpenForFunding is safe,
