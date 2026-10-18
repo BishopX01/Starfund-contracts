@@ -98,10 +98,11 @@ Returns the current count of distinct funders.
 Admin-only: raises the per-deposit minimum while the escrow is open (status `0`). The new floor
 must be positive and strictly greater than the current floor. Emits `MinContributionFloorRaised`.
 
-#### `lower_min_contribution_floor(env: Env, new_floor: i128) -> i128`
+#### `lower_min_contribution_floor(env: Env, new_floor: i128, expected_nonce: u32) -> i128`
 
 Admin-only: lowers the per-deposit minimum while the escrow is open (status `0`). The new floor
-must be positive and strictly less than the current floor. Emits `MinContributionFloorLowered`.
+must be positive and strictly less than the current floor. Requires the current admin nonce to
+prevent replayed configuration updates. Emits `MinContributionFloorLowered`.
 
 #### `raise_max_per_investor(env: Env, new_cap: i128, expected_nonce: u32) -> i128`
 

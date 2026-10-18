@@ -1245,9 +1245,15 @@ fn test_lower_min_contribution_floor_success() {
 
     assert_eq!(client.get_min_contribution_floor(), initial_floor);
 
-    let new_floor = client.lower_min_contribution_floor(&5_000i128);
+    let new_floor =
+        client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert_eq!(new_floor, 5_000i128);
     assert_eq!(client.get_min_contribution_floor(), 5_000i128);
+    assert_eq!(client.get_admin_nonce(), 1);
+    assert_contract_error(
+        client.try_lower_min_contribution_floor(&1_000i128, &0u32),
+        EscrowError::AdminNonceMismatch,
+    );
 }
 
 #[test]
@@ -1282,7 +1288,7 @@ fn test_lower_floor_enforces_new_floor() {
     );
 
     // Lower the floor
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert_eq!(client.get_min_contribution_floor(), 5_000i128);
 
     // Fund at the new floor level must succeed
@@ -1330,7 +1336,7 @@ fn test_lower_floor_rejects_raise() {
     );
 
     // Attempt to raise the floor
-    client.lower_min_contribution_floor(&20_000i128);
+    client.lower_min_contribution_floor(&20_000i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1365,7 +1371,7 @@ fn test_lower_floor_rejects_same_floor() {
     );
 
     // Attempt to set the same floor
-    client.lower_min_contribution_floor(&10_000i128);
+    client.lower_min_contribution_floor(&10_000i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1400,7 +1406,7 @@ fn test_lower_floor_rejects_zero() {
     );
 
     // Non-positive floor must be rejected
-    client.lower_min_contribution_floor(&0i128);
+    client.lower_min_contribution_floor(&0i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1435,7 +1441,7 @@ fn test_lower_floor_rejects_negative() {
     );
 
     // Negative floor must be rejected
-    client.lower_min_contribution_floor(&-1i128);
+    client.lower_min_contribution_floor(&-1i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1474,7 +1480,7 @@ fn test_lower_floor_rejects_non_open_state() {
     assert_eq!(client.get_escrow().status, 1);
 
     // Cannot lower floor in funded state
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1507,7 +1513,7 @@ fn test_lower_floor_requires_admin_auth() {
         &None::<u32>,
     );
 
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert!(
         env.auths().iter().any(|(addr, _)| *addr == admin),
         "admin auth was not recorded for lower_min_contribution_floor"
@@ -1546,7 +1552,7 @@ fn test_lower_floor_unauthorized_panics() {
     );
 
     env.mock_auths(&[]);
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
 }
 
 #[test]
@@ -1583,7 +1589,7 @@ fn test_lower_floor_emits_event() {
         &None::<u32>,
     );
 
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
 
     assert_eq!(
         env.events().all(),
@@ -1628,11 +1634,11 @@ fn test_lower_floor_twice_successive() {
     );
 
     assert_eq!(client.get_min_contribution_floor(), 10_000i128);
-    client.lower_min_contribution_floor(&7_000i128);
+    client.lower_min_contribution_floor(&7_000i128, &client.get_admin_nonce());
     assert_eq!(client.get_min_contribution_floor(), 7_000i128);
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert_eq!(client.get_min_contribution_floor(), 5_000i128);
-    client.lower_min_contribution_floor(&1_000i128);
+    client.lower_min_contribution_floor(&1_000i128, &client.get_admin_nonce());
     assert_eq!(client.get_min_contribution_floor(), 1_000i128);
 }
 
@@ -1667,7 +1673,7 @@ fn test_lower_floor_fund_at_old_floor_still_enforced() {
     );
 
     // Lower floor from 10,000 to 5,000
-    client.lower_min_contribution_floor(&5_000i128);
+    client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
 
     // Fund at exactly the new floor (5,000) must succeed
     let inv1 = Address::generate(&env);
@@ -1720,7 +1726,7 @@ fn test_lower_floor_unconfigured_succeeds_if_positive() {
 
     // Cannot lower to a positive value since 0 is the current floor and new floor must be < old
     assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        client.lower_min_contribution_floor(&5_000i128);
+        client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     }))
     .is_err());
 }

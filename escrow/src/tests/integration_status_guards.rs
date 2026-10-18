@@ -180,7 +180,8 @@ fn test_lower_min_contribution_floor_rejects_when_cancelled() {
         &None::<u32>,
     );
     cancel(&client, &admin);
-    let result = client.try_lower_min_contribution_floor(&50i128);
+    let result =
+        client.try_lower_min_contribution_floor(&50i128, &client.get_admin_nonce());
     assert_contract_error(result, EscrowError::FloorLowerNotOpen);
 }
 

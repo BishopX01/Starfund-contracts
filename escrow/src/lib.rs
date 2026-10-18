@@ -6643,8 +6643,13 @@ impl StarfundEscrow {
     /// - If the escrow is not open (status != 0).
     /// - If `new_floor` is not strictly lower than the current floor.
     /// - If `new_floor` is not positive.
-    pub fn lower_min_contribution_floor(env: Env, new_floor: i128) -> i128 {
+    pub fn lower_min_contribution_floor(
+        env: Env,
+        new_floor: i128,
+        expected_nonce: u32,
+    ) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         guard_status_eq(&env, escrow.status, 0, EscrowError::FloorLowerNotOpen);
         ensure(&env, new_floor > 0, EscrowError::NewFloorNotPositive);
