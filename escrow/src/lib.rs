@@ -1077,6 +1077,8 @@ pub enum EscrowError {
     /// division edge case into [`StarfundEscrow::withdraw`] and
     /// [`StarfundEscrow::compute_investor_payout`]. Reject at the transition instead.
     PartialSettleNoFunds = 209,
+    /// [`StarfundEscrow::init`] configured token decimals above the supported maximum of 18.
+    FundingTokenDecimalsOutOfRange = 268,
 }
 
 #[inline(always)]
@@ -3482,6 +3484,14 @@ impl StarfundEscrow {
             !env.storage().instance().has(&DataKey::Escrow),
             EscrowError::EscrowAlreadyInitialized,
         );
+
+        if let Some(decimals) = token_decimals {
+            ensure(
+                &env,
+                decimals <= 18,
+                EscrowError::FundingTokenDecimalsOutOfRange,
+            );
+        }
 
         Self::validate_yield_tiers_table(&env, &yield_tiers, yield_bps);
 

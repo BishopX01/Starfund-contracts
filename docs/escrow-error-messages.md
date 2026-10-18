@@ -2,6 +2,12 @@
 
 This document contains reference codes for typed `EscrowError` values emitted by the StarFund escrow smart contract.
 
+## Initialization Errors
+
+| Error Name | Code | Description |
+|---|---|---|
+| `FundingTokenDecimalsOutOfRange` | 268 | `init` configured funding-token decimals above the supported maximum of 18. |
+
 ## Settlement & Bounds Errors
 
 Codes raised by the settlement-family entrypoints (`partial_settle`, `settle`, `withdraw`,
