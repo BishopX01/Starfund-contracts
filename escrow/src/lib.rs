@@ -1360,10 +1360,6 @@ pub enum DataKey {
     /// Per-investor contributed principal recorded during [`StarfundEscrow::fund`].
     /// **Persistent** storage. Absent ΓçÆ `0`. One entry per investor address.
     InvestorContribution(Address),
-    /// Per-investor gross amount credited by successful funding calls.
-    /// **Persistent** storage. Unfunds, refunds, and withdrawals do not reduce it.
-    /// An absent key falls back to the current contribution for backward compatibility.
-    InvestorTotalDeposited(Address),
     /// When true, compliance/legal hold blocks payouts and settlement finalization.
     /// Absent ΓçÆ `false` (no hold). Toggled by admin via [`StarfundEscrow::set_legal_hold`].
     LegalHold,
@@ -1557,6 +1553,12 @@ pub enum DataKey {
     /// [`StarfundEscrow::get_allowlisted_investors_count`] is `O(1)` and never
     /// scans persistent storage.
     AllowlistCount,
+    /// Per-investor gross amount credited by successful funding calls.
+    /// **Persistent** storage. Unfunds, refunds, and withdrawals do not reduce it.
+    /// An absent key falls back to the current contribution for backward compatibility.
+    ///
+    /// **Additive key (ADR-007):** appended to preserve existing key discriminants.
+    InvestorTotalDeposited(Address),
 }
 
 // --- Data types ---
