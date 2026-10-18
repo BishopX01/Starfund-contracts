@@ -6531,8 +6531,9 @@ impl StarfundEscrow {
     /// - If the escrow is not open.
     /// - If no unique-investor cap was configured at initialization.
     /// - If `new_cap` is not strictly higher than the current cap.
-    pub fn raise_max_unique_investors(env: Env, new_cap: u32) -> u32 {
+    pub fn raise_max_unique_investors(env: Env, new_cap: u32, expected_nonce: u32) -> u32 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         // We can reuse the existing EscrowNotOpenForFunding or similar open check.
         // Or if there's a specific one, we use it. For now EscrowNotOpenForFunding is safe,
@@ -6642,8 +6643,9 @@ impl StarfundEscrow {
     /// - If the escrow is not open (status != 0).
     /// - If `new_floor` is not strictly lower than the current floor.
     /// - If `new_floor` is not positive.
-    pub fn lower_min_contribution_floor(env: Env, new_floor: i128) -> i128 {
+    pub fn lower_min_contribution_floor(env: Env, new_floor: i128, expected_nonce: u32) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         guard_status_eq(&env, escrow.status, 0, EscrowError::FloorLowerNotOpen);
         ensure(&env, new_floor > 0, EscrowError::NewFloorNotPositive);
@@ -6691,8 +6693,9 @@ impl StarfundEscrow {
     /// - [`EscrowError::CapLowerNotOpen`] if escrow is not in Open state.
     /// - [`EscrowError::MaxPerInvestorCapNotConfigured`] if no cap was set at init.
     /// - [`EscrowError::MaxPerInvestorCapNotRaised`] if `new_cap <= current_cap`.
-    pub fn raise_max_per_investor(env: Env, new_cap: i128) -> i128 {
+    pub fn raise_max_per_investor(env: Env, new_cap: i128, expected_nonce: u32) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         guard_status_eq(&env, escrow.status, 0, EscrowError::CapLowerNotOpen);
 

@@ -144,7 +144,7 @@ fn test_lower_max_unique_investors_rejects_when_cancelled() {
         &None::<u32>,
     );
     cancel(&client, &admin);
-    let result = client.try_lower_max_unique_investors(&5u32);
+    let result = client.try_lower_max_unique_investors(&5u32, &client.get_admin_nonce());
     assert_contract_error(result, EscrowError::CapLowerNotOpen);
 }
 
@@ -180,7 +180,7 @@ fn test_lower_min_contribution_floor_rejects_when_cancelled() {
         &None::<u32>,
     );
     cancel(&client, &admin);
-    let result = client.try_lower_min_contribution_floor(&50i128);
+    let result = client.try_lower_min_contribution_floor(&50i128, &client.get_admin_nonce());
     assert_contract_error(result, EscrowError::FloorLowerNotOpen);
 }
 
@@ -252,5 +252,5 @@ fn test_lower_max_unique_investors_succeeds_when_open() {
         &None::<u32>,
     );
     // Lowering from 10 to 5 should succeed while open.
-    client.lower_max_unique_investors(&5u32);
+    client.lower_max_unique_investors(&5u32, &client.get_admin_nonce());
 }

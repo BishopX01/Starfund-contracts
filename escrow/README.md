@@ -158,7 +158,7 @@ invariants:
       - test::test_init_sets_initialized_flag
 ```
 
-### `raise_max_per_investor(new_cap: i128)`
+### `raise_max_per_investor(new_cap: i128, expected_nonce: u32)`
 
 Admin-only entrypoint to raise the per-investor contribution cap while the escrow is open.
 
@@ -561,4 +561,3 @@ Use as a human gate; not a substitute for professional audit.
 - [ ] Maturity and claim-lock semantics use ledger time only (see `lib.rs` rustdoc).
 - [ ] `migrate` is understood to panic on all paths; redeploy policy is confirmed.
 - [ ] CI: `cargo fmt --all -- --check`, `cargo test`, `cargo llvm-cov --features testutils --fail-under-lines 95` pass.
-
