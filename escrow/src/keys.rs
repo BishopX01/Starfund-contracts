@@ -124,6 +124,11 @@ pub(crate) fn collateral_pledge_key() -> DataKey {
     DataKey::SmeCollateralPledge
 }
 
+/// Instance-storage commitments from the most recent collateral batch.
+pub(crate) fn collateral_pledge_batch_key() -> DataKey {
+    DataKey::SmeCollateralCommitmentBatch
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

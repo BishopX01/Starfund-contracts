@@ -1550,6 +1550,9 @@ pub enum DataKey {
     /// [`StarfundEscrow::get_allowlisted_investors_count`] is `O(1)` and never
     /// scans persistent storage.
     AllowlistCount,
+    /// Complete set of commitments from the most recent batch record operation.
+    /// Absent for single-record updates and on legacy instances.
+    SmeCollateralCommitmentBatch,
 }
 
 // --- Data types ---
@@ -4859,6 +4862,31 @@ impl StarfundEscrow {
         env.storage().instance().get(&keys::collateral_pledge_key())
     }
 
+    /// Retrieve the commitments recorded by the most recent collateral write.
+    ///
+    /// A batch call returns every item in that batch; a single-record call returns
+    /// a one-item vector. Existing instances without batch storage fall back to the
+    /// currently stored single commitment.
+    pub fn get_sme_collateral_commitments(env: Env) -> Vec<SmeCollateralCommitment> {
+        if let Some(commitments) = env
+            .storage()
+            .instance()
+            .get(&keys::collateral_pledge_batch_key())
+        {
+            return commitments;
+        }
+
+        let mut commitments = Vec::new(&env);
+        if let Some(commitment) = env
+            .storage()
+            .instance()
+            .get(&keys::collateral_pledge_key())
+        {
+            commitments.push_back(commitment);
+        }
+        commitments
+    }
+
     /// Retire the recorded SME collateral pledge.
     ///
     /// Metadata-only: no tokens are moved. Requires SME auth.
@@ -4879,6 +4907,9 @@ impl StarfundEscrow {
         env.storage()
             .instance()
             .remove(&keys::collateral_pledge_key());
+        env.storage()
+            .instance()
+            .remove(&keys::collateral_pledge_batch_key());
 
         CollateralClearedEvt {
             name: symbol_short!("coll_clr"),
@@ -5470,6 +5501,9 @@ impl StarfundEscrow {
         env.storage()
             .instance()
             .set(&keys::collateral_pledge_key(), &commitment);
+        env.storage()
+            .instance()
+            .remove(&keys::collateral_pledge_batch_key());
 
         CollateralRecordedEvt {
             name: symbol_short!("coll_rec"),
@@ -5493,9 +5527,9 @@ impl StarfundEscrow {
     /// - `asset` is non-empty ([`EscrowError::CollateralAssetEmpty`])
     /// - Replacement timestamp not backwards ([`EscrowError::CollateralTimestampBackwards`])
     ///
-    /// The stored [`SmeCollateralCommitment`] after a successful batch is the **last** item in
-    /// the vector. A [`CollateralRecordedEvt`] is emitted for **each** item, preserving the
-    /// per-item audit trail.
+    /// All items are available through [`StarfundEscrow::get_sme_collateral_commitments`];
+    /// [`StarfundEscrow::get_sme_collateral_commitment`] continues to return the last item.
+    /// A [`CollateralRecordedEvt`] is emitted for **each** item, preserving the per-item audit trail.
     ///
     /// # Batch bounds
     /// - `items` must be non-empty ([`EscrowError::CollateralBatchEmpty`]).
@@ -5550,6 +5584,7 @@ impl StarfundEscrow {
             amount: 0,
             recorded_at: now,
         };
+        let mut commitments = Vec::new(&env);
 
         for i in 0..n {
             let (asset, amount) = items.get(i).unwrap();
@@ -5565,10 +5600,7 @@ impl StarfundEscrow {
                 amount,
                 recorded_at: now,
             };
-
-            env.storage()
-                .instance()
-                .set(&keys::collateral_pledge_key(), &last_commitment);
+            commitments.push_back(last_commitment.clone());
 
             CollateralRecordedEvt {
                 name: symbol_short!("coll_rec"),
@@ -5578,6 +5610,13 @@ impl StarfundEscrow {
             }
             .publish(&env);
         }
+
+        env.storage()
+            .instance()
+            .set(&keys::collateral_pledge_key(), &last_commitment);
+        env.storage()
+            .instance()
+            .set(&keys::collateral_pledge_batch_key(), &commitments);
 
         last_commitment
     }

@@ -1381,6 +1381,50 @@ fn test_record_collateral_stored_and_does_not_block_settle() {
 }
 
 #[test]
+fn test_batch_record_collateral_preserves_every_item() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    client.init(
+        &admin,
+        &soroban_sdk::String::from_str(&env, "COL_BATCH"),
+        &sme,
+        &TARGET,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &None,
+        &Address::generate(&env),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    let items = soroban_sdk::vec![
+        &env,
+        (symbol_short!("GOLD"), 100i128),
+        (symbol_short!("SILVER"), 200i128),
+        (symbol_short!("XLM"), 300i128),
+    ];
+    let last = client.batch_record_collateral(&items);
+    let commitments = client.get_sme_collateral_commitments();
+
+    assert_eq!(commitments.len(), 3);
+    assert_eq!(commitments.get(0).unwrap().asset, symbol_short!("GOLD"));
+    assert_eq!(commitments.get(0).unwrap().amount, 100i128);
+    assert_eq!(commitments.get(1).unwrap().asset, symbol_short!("SILVER"));
+    assert_eq!(commitments.get(1).unwrap().amount, 200i128);
+    assert_eq!(commitments.get(2).unwrap(), last);
+    assert_eq!(client.get_sme_collateral_commitment(), Some(last));
+}
+
+#[test]
 #[should_panic]
 fn test_collateral_zero_panics() {
     let env = Env::default();
