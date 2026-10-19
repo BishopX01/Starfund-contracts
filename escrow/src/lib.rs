@@ -717,6 +717,11 @@ pub enum EscrowError {
     CollateralBatchEmpty = 64,
     /// [`StarfundEscrow::batch_record_collateral`] exceeded [`MAX_COLLATERAL_BATCH`].
     CollateralBatchTooLarge = 65,
+    /// [`StarfundEscrow::record_sme_collateral_commitment`] or
+    /// [`StarfundEscrow::batch_record_collateral`] called while the escrow is not open.
+    CollateralNotOpen = 66,
+    /// Collateral recording was attempted while an operational pause was active.
+    PausedBlocksCollateral = 67,
 
     /// [`StarfundEscrow::set_investors_allowlisted`] received an empty batch.
     InvestorBatchEmpty = 70,
@@ -5464,6 +5469,8 @@ impl StarfundEscrow {
     /// - [`EscrowError::CollateralAmountNotPositive`] if `amount <= 0`.
     /// - [`EscrowError::CollateralAssetEmpty`] if `asset` is empty.
     /// - [`EscrowError::CollateralTimestampBackwards`] if the replacement timestamp is in the past.
+    /// - [`EscrowError::PausedBlocksCollateral`] if an operational pause is active.
+    /// - [`EscrowError::CollateralNotOpen`] if the escrow is not open.
     /// - Standard uninitialized check via `load_escrow_require_sme`.
     pub fn record_sme_collateral_commitment(
         env: Env,
@@ -5477,8 +5484,15 @@ impl StarfundEscrow {
             EscrowError::CollateralAssetEmpty,
         );
 
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksCollateral,
+            PauseEntry::Admin,
+        );
+
         // env.clone(): env is used again after this call for storage read/write, timestamp, and publish.
         let escrow = Self::load_escrow_require_sme(&env);
+        ensure(&env, escrow.status == 0, EscrowError::CollateralNotOpen);
 
         let now = env.ledger().timestamp();
         let prior: Option<SmeCollateralCommitment> =
@@ -5534,6 +5548,7 @@ impl StarfundEscrow {
     /// # Batch bounds
     /// - `items` must be non-empty ([`EscrowError::CollateralBatchEmpty`]).
     /// - `items.len()` must not exceed [`MAX_COLLATERAL_BATCH`] ([`EscrowError::CollateralBatchTooLarge`]).
+    /// - The escrow must be open and not paused.
     ///
     /// # Authorization
     /// Requires [`InvoiceEscrow::sme_address`] auth (same as the single entrypoint).
@@ -5563,7 +5578,14 @@ impl StarfundEscrow {
             );
         }
 
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksCollateral,
+            PauseEntry::Admin,
+        );
+
         let escrow = Self::load_escrow_require_sme(&env);
+        ensure(&env, escrow.status == 0, EscrowError::CollateralNotOpen);
         let now = env.ledger().timestamp();
 
         // Check timestamp against the existing stored commitment (if any).

@@ -1425,6 +1425,59 @@ fn test_batch_record_collateral_preserves_every_item() {
 }
 
 #[test]
+fn test_collateral_recording_requires_unpaused_open_escrow() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    client.init(
+        &admin,
+        &soroban_sdk::String::from_str(&env, "COL_GUARDS"),
+        &sme,
+        &TARGET,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &None,
+        &Address::generate(&env),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    let asset = symbol_short!("USDC");
+    let items = soroban_sdk::vec![&env, (asset.clone(), 100i128)];
+    client.set_paused(&true, &crate::PauseScope::All, &crate::PauseReason::Incident);
+    assert_contract_error(
+        client.try_record_sme_collateral_commitment(&asset, &100i128),
+        EscrowError::PausedBlocksCollateral,
+    );
+    assert_contract_error(
+        client.try_batch_record_collateral(&items),
+        EscrowError::PausedBlocksCollateral,
+    );
+
+    client.set_paused(&false, &crate::PauseScope::All, &crate::PauseReason::Incident);
+    let investor = Address::generate(&env);
+    client.fund(&investor, &TARGET);
+    assert_eq!(client.settle().escrow.status, 2);
+
+    assert_contract_error(
+        client.try_record_sme_collateral_commitment(&asset, &100i128),
+        EscrowError::CollateralNotOpen,
+    );
+    assert_contract_error(
+        client.try_batch_record_collateral(&items),
+        EscrowError::CollateralNotOpen,
+    );
+}
+
+#[test]
 #[should_panic]
 fn test_collateral_zero_panics() {
     let env = Env::default();
