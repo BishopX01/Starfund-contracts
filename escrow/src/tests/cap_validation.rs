@@ -2300,6 +2300,82 @@ fn test_raise_max_per_investor_not_raised_rejects_equal() {
 }
 
 #[test]
+fn test_raise_max_per_investor_rejects_cap_above_funding_target() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let admin = Address::generate(&env);
+    let sme = Address::generate(&env);
+    let old_cap = 50_000_000_000i128;
+
+    client.init(
+        &admin,
+        &String::from_str(&env, "RMPI_TGT"),
+        &sme,
+        &100_000_000_000i128,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &None,
+        &Address::generate(&env),
+        &None,
+        &None,
+        &None,
+        &Some(old_cap),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    assert_contract_error(
+        client.try_raise_max_per_investor(&100_000_000_001i128),
+        EscrowError::PerInvestorCapExceedsFundingTarget,
+    );
+    assert_eq!(client.get_max_per_investor_cap(), Some(old_cap));
+}
+
+#[test]
+fn test_raise_max_per_investor_rejects_cap_below_minimum_contribution_floor() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let admin = Address::generate(&env);
+    let sme = Address::generate(&env);
+    let old_cap = 20_000_000_000i128;
+
+    client.init(
+        &admin,
+        &String::from_str(&env, "RMPI_FLR"),
+        &sme,
+        &100_000_000_000i128,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &Some(60_000_000_000i128),
+        &Address::generate(&env),
+        &None,
+        &None,
+        &None,
+        &Some(old_cap),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    assert_contract_error(
+        client.try_raise_max_per_investor(&50_000_000_000i128),
+        EscrowError::PerInvestorCapBelowMinContributionFloor,
+    );
+    assert_eq!(client.get_max_per_investor_cap(), Some(old_cap));
+}
+
+#[test]
 fn test_raise_max_per_investor_emits_event() {
     use soroban_sdk::testutils::Events as _;
 

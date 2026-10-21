@@ -653,6 +653,17 @@ pub enum EscrowError {
     FundingTokenNotSet = 21,
     /// [`DataKey::Treasury`] is unset (escrow not fully initialized).
     TreasuryNotSet = 22,
+    /// [`StarfundEscrow::raise_max_per_investor`] / [`StarfundEscrow::lower_max_per_investor`]
+    /// called without a configured cap.
+    MaxPerInvestorCapNotConfigured = 24,
+    /// [`StarfundEscrow::raise_max_per_investor`] did not strictly raise the cap.
+    MaxPerInvestorCapNotRaised = 25,
+    /// [`StarfundEscrow::lower_max_per_investor`] received a non-positive cap.
+    MaxPerInvestorCapNotPositive = 26,
+    /// [`StarfundEscrow::lower_max_per_investor`] did not strictly lower the cap.
+    MaxPerInvestorCapNotLowered = 27,
+    /// [`StarfundEscrow::lower_max_per_investor`] called while escrow is not open.
+    PerInvestorCapLowerNotOpen = 28,
 
     /// [`StarfundEscrow::sweep_terminal_dust`] blocked while a legal hold is active.
     LegalHoldBlocksTreasuryDustSweep = 30,
@@ -1056,6 +1067,12 @@ pub enum EscrowError {
     /// This bounds the worst-case release instruction budget that scales with participant
     /// count when `max_unique_investors` was not configured at init.
     UniqueInvestorHardCapReached = 261,
+    /// [`StarfundEscrow::raise_max_per_investor`] set a cap above the funding target.
+    PerInvestorCapExceedsFundingTarget = 268,
+    /// [`StarfundEscrow::raise_max_per_investor`] set a cap below the minimum contribution floor.
+    PerInvestorCapBelowMinContributionFloor = 270,
+    /// [`StarfundEscrow::raise_maturity_max_horizon`] did not strictly raise the horizon.
+    HorizonNotRaised = 271,
 
     /// [`StarfundEscrow::accept_payer_recovery`] called after the proposal expiry recorded at
     /// [`DataKey::PendingPayerExpiry`]. Re-propose to nominate a fresh successor payer.
@@ -1077,6 +1094,14 @@ pub enum EscrowError {
     /// division edge case into [`StarfundEscrow::withdraw`] and
     /// [`StarfundEscrow::compute_investor_payout`]. Reject at the transition instead.
     PartialSettleNoFunds = 209,
+    /// [`StarfundEscrow::init`] configured token decimals above the supported maximum of 18.
+    FundingTokenDecimalsOutOfRange = 268,
+    /// [`StarfundEscrow::init`] used the escrow contract address as the token or recipient.
+    InitAddressIsContract = 269,
+    /// [`StarfundEscrow::init`] configured `max_per_investor` above the funding target.
+    MaxPerInvestorExceedsAmount = 270,
+    /// [`StarfundEscrow::init`] configured `min_contribution` above `max_per_investor`.
+    MinContributionExceedsMaxPerInvestor = 271,
 }
 
 #[inline(always)]
@@ -3483,6 +3508,22 @@ impl StarfundEscrow {
             EscrowError::EscrowAlreadyInitialized,
         );
 
+        if let Some(decimals) = token_decimals {
+            ensure(
+                &env,
+                decimals <= 18,
+                EscrowError::FundingTokenDecimalsOutOfRange,
+            );
+        }
+        let contract_address = env.current_contract_address();
+        ensure(
+            &env,
+            funding_token != contract_address
+                && sme_address != contract_address
+                && treasury != contract_address,
+            EscrowError::InitAddressIsContract,
+        );
+
         Self::validate_yield_tiers_table(&env, &yield_tiers, yield_bps);
 
         let max_horizon = maturity_max_horizon.unwrap_or(DEFAULT_MATURITY_MAX_HORIZON_SECS);
@@ -3511,6 +3552,19 @@ impl StarfundEscrow {
 
         if let Some(cap) = max_per_investor {
             ensure(&env, cap > 0, EscrowError::MaxPerInvestorNotPositive);
+            ensure(
+                &env,
+                cap <= amount,
+                EscrowError::MaxPerInvestorExceedsAmount,
+            );
+        }
+
+        if let (Some(minimum), Some(cap)) = (min_contribution, max_per_investor) {
+            ensure(
+                &env,
+                minimum <= cap,
+                EscrowError::MinContributionExceedsMaxPerInvestor,
+            );
         }
 
         if let Some(cap) = max_unique_investors {
@@ -6690,14 +6744,22 @@ impl StarfundEscrow {
     /// # Errors
     /// Emits typed [`EscrowError`] codes:
     /// - [`EscrowError::Unauthorized`] if caller is not admin (via `load_escrow_require_admin`).
-    /// - [`EscrowError::CapLowerNotOpen`] if escrow is not in Open state.
+    /// - [`EscrowError::EscrowNotOpenForFunding`] if escrow is not in Open state.
     /// - [`EscrowError::MaxPerInvestorCapNotConfigured`] if no cap was set at init.
     /// - [`EscrowError::MaxPerInvestorCapNotRaised`] if `new_cap <= current_cap`.
-    pub fn raise_max_per_investor(env: Env, new_cap: i128, expected_nonce: u32) -> i128 {
+    /// - [`EscrowError::PerInvestorCapExceedsFundingTarget`] if `new_cap` exceeds the funding target.
+    /// - [`EscrowError::PerInvestorCapBelowMinContributionFloor`] if `new_cap` is below the minimum
+    ///   contribution floor.
+    pub fn raise_max_per_investor(env: Env, new_cap: i128) -> i128 {
         let escrow = Self::load_escrow_require_admin(&env);
         Self::consume_admin_nonce(&env, expected_nonce);
 
-        guard_status_eq(&env, escrow.status, 0, EscrowError::CapLowerNotOpen);
+        guard_status_eq(
+            &env,
+            escrow.status,
+            0,
+            EscrowError::EscrowNotOpenForFunding,
+        );
 
         let old_cap: Option<i128> = env.storage().instance().get(&keys::max_per_investor_cap());
         ensure(
@@ -6711,6 +6773,21 @@ impl StarfundEscrow {
             &env,
             new_cap > old_cap,
             EscrowError::MaxPerInvestorCapNotRaised,
+        );
+        ensure(
+            &env,
+            new_cap <= escrow.funding_target,
+            EscrowError::PerInvestorCapExceedsFundingTarget,
+        );
+        let min_contribution_floor: i128 = env
+            .storage()
+            .instance()
+            .get(&keys::min_contribution_floor())
+            .unwrap_or(0);
+        ensure(
+            &env,
+            new_cap >= min_contribution_floor,
+            EscrowError::PerInvestorCapBelowMinContributionFloor,
         );
 
         env.storage()
@@ -8397,7 +8474,8 @@ impl StarfundEscrow {
     /// Update the configured maximum maturity horizon for this escrow instance.
     ///
     /// Only the current admin may call this. The new horizon applies to subsequent
-    /// [`StarfundEscrow::update_maturity`] calls; existing maturity values are unaffected.
+    /// [`StarfundEscrow::update_maturity`] calls. The new horizon cannot invalidate the
+    /// escrow's currently configured maturity.
     ///
     /// Emits [`MaturityMaxHorizonUpdated`] with the old and new horizon values.
     /// Returns the currently configured maximum maturity horizon (seconds from ledger time).
@@ -8428,6 +8506,17 @@ impl StarfundEscrow {
             .get::<DataKey, u64>(&DataKey::MaturityMaxHorizon)
             .unwrap_or(DEFAULT_MATURITY_MAX_HORIZON_SECS);
 
+        let latest_allowed_maturity = env
+            .ledger()
+            .timestamp()
+            .checked_add(new_horizon)
+            .unwrap_or_else(|| fail(&env, EscrowError::MaturityExceedsMaxHorizon));
+        ensure(
+            &env,
+            escrow.maturity <= latest_allowed_maturity,
+            EscrowError::MaturityExceedsMaxHorizon,
+        );
+
         env.storage()
             .instance()
             .set(&DataKey::MaturityMaxHorizon, &new_horizon);
@@ -8445,25 +8534,28 @@ impl StarfundEscrow {
 
     /// Monotonically **raise** the maturity-max-horizon ceiling ΓÇö a forward-only governance lever.
     ///
-    /// Unlike the general [`StarfundEscrow::update_maturity_max_horizon`] setter (which accepts any
-    /// value), this entrypoint guarantees the horizon can only ever be raised, never lowered or held
-    /// equal. This supports a "term-extension only" policy and avoids the confusing invalid
-    /// configuration that arises when a horizon is lowered below an already-set maturity.
+    /// Unlike the general [`StarfundEscrow::update_maturity_max_horizon`] setter (which may lower
+    /// the horizon if the current maturity remains within its new limit), this entrypoint guarantees
+    /// the horizon can only ever be raised, never lowered or held equal.
     ///
     /// # Authorization
     /// Requires the signature of the current [`InvoiceEscrow::admin`].
+    /// Requires the current admin nonce to be supplied for replay protection.
     ///
     /// # Errors
     /// - [`EscrowError::HorizonNotRaised`] if `new_horizon` is not strictly greater than the current
     ///   stored horizon (rejects equal or lower values).
+    /// - [`EscrowError::AdminNonceMismatch`] if `expected_nonce` does not match the current admin
+    ///   nonce.
     ///
     /// # Events
     /// Emits [`MaturityMaxHorizonRaised`] carrying `invoice_id`, the old horizon, and the new horizon.
     ///
     /// # Returns
     /// The newly stored horizon.
-    pub fn raise_maturity_max_horizon(env: Env, new_horizon: u64) -> u64 {
+    pub fn raise_maturity_max_horizon(env: Env, new_horizon: u64, expected_nonce: u32) -> u64 {
         let escrow = Self::load_escrow_require_admin(&env);
+        Self::consume_admin_nonce(&env, expected_nonce);
 
         let old_horizon = env
             .storage()
