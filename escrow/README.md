@@ -158,7 +158,7 @@ invariants:
       - test::test_init_sets_initialized_flag
 ```
 
-### `raise_max_per_investor(new_cap: i128)`
+### `raise_max_per_investor(new_cap: i128, expected_nonce: u32)`
 
 Admin-only entrypoint to raise the per-investor contribution cap while the escrow is open.
 
