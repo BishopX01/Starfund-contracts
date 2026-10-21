@@ -1183,10 +1183,12 @@ fn test_tier_selection_edges_base_vs_high_bucket() {
     client.fund_with_commitment(&i_short, &10_000i128, &40u64);
 
     assert_eq!(client.get_investor_yield_bps(&i_short), 800);
+    assert_eq!(client.get_investor_claim_not_before(&i_short), 40);
 
     client.fund_with_commitment(&i_long, &10_000i128, &50u64);
 
     assert_eq!(client.get_investor_yield_bps(&i_long), 850);
+    assert_eq!(client.get_investor_claim_not_before(&i_long), 50);
 }
 
 /// A second `fund_with_commitment` from the same investor (who already has a
@@ -7307,6 +7309,9 @@ fn test_unfund_funder_count_floor() {
             .set(&DataKey::UniqueFunderCount, &0u32);
     });
 
+    // The public getter counts active indexed contributors instead of trusting the cache.
+    assert_eq!(client.get_unique_funder_count(), 1);
+
     // Unfund full contribution — saturating_sub must keep it at 0, not wrap.
     client.unfund(&investor, &1i128);
 
@@ -7678,6 +7683,7 @@ fn test_unfund_then_fund_again() {
     client.fund(&investor, &5_000i128);
 
     assert_eq!(client.get_contribution(&investor), 15_000i128);
+    assert_eq!(client.get_total_deposited(&investor), 25_000i128);
     assert_eq!(client.get_escrow().funded_amount, 15_000i128);
 }
 
@@ -7739,9 +7745,9 @@ fn test_unfund_event_emitted() {
         .expect("expected at least one event after unfund");
 
     let expected = EscrowUnfunded {
-        name: symbol_short!("unfunded"),
-        invoice_id,
+        name: symbol_short!("unfund"),
         investor: investor.clone(),
+        invoice_id,
         amount: unfund_amount,
         remaining_contribution: fund_amount - unfund_amount,
         new_funded_amount: fund_amount - unfund_amount,
